@@ -1,0 +1,177 @@
+---
+title: "DAV Project"
+author: "Nishtha Chaudhary"
+date: "1 May 2019"
+output: html_document
+---
+
+
+#Installing Required Packages
+
+```{r}
+install.packages("tidyverse")
+library(tidyverse)  # data manipulation
+install.packages("cluster")
+library(cluster)    # clustering algorithms
+install.packages("factoextra")
+library(factoextra)
+```
+
+#Importing the data file
+
+```{r cars}
+library(readxl)
+salesdata<-read_excel("C:/Users/nisht/Downloads/sales.xlsx")
+head(salesdata)
+salesdata<-salesdata[,-1]
+
+#Remove the missing values
+df<-na.omit(salesdata)
+summary(salesdata)
+
+```
+
+#data preparation
+
+```{r}
+# VIM library for using 'aggr'
+install.packages("VIM")
+library(VIM)
+
+# 'aggr' plots the amount of missing/imputed values in each column
+aggr(salesdata)
+```
+
+
+
+#compute and visualize the distance matrix
+
+```{r}
+dst <- dist(salesdata[1:7,-1],)
+dst <- data.matrix(dst)
+
+dim <- ncol(dst)
+
+image(1:dim, 1:dim, dst, axes = FALSE, xlab="", ylab="")
+
+axis(1, 1:dim, salesdata, cex.axis = 0.5, las=3)
+axis(2, 1:dim, salesdata, cex.axis = 0.5, las=1)
+
+
+text(expand.grid(1:dim, 1:dim), sprintf("%0.1f", dst), cex=0.6)
+
+
+````
+#Cluster of k-=2
+
+```{r}
+
+k2 <- kmeans(salesdata, centers = 2, nstart = 25)
+str(k2)
+  
+```
+
+```{r}
+k2
+```
+
+```{r pressure, echo=FALSE}
+fviz_cluster(k2, data = salesdata)
+?fviz_cluster()
+```
+
+
+## Executing the same with k=3,4,5,6
+
+```{r}
+k3 <- kmeans(salesdata, centers = 3, nstart = 25)
+k4 <- kmeans(salesdata, centers = 4, nstart = 25)
+k5 <- kmeans(salesdata, centers = 5, nstart = 25)
+k6 <- kmeans(salesdata, centers = 6, nstart = 25)
+k7 <- kmeans(salesdata, centers = 7, nstart = 25)
+
+```
+
+#Plot to compare
+
+```{r}
+# plots to compare
+p1 <- fviz_cluster(k2, geom = "point", data = salesdata) + ggtitle("k = 2")
+p2 <- fviz_cluster(k3, geom = "point",  data = salesdata) + ggtitle("k = 3")
+p3 <- fviz_cluster(k4, geom = "point",  data = salesdata) + ggtitle("k = 4")
+p4 <- fviz_cluster(k5, geom = "point",  data = salesdata) + ggtitle("k = 5")
+p5 <- fviz_cluster(k6, geom = "point",  data = salesdata) + ggtitle("k = 6")
+p6 <- fviz_cluster(k7, geom = "point",  data = salesdata) + ggtitle("k = 7")
+
+```
+
+#Grid plot
+
+```{r pressure, echo=FALSE}
+library(gridExtra)
+grid.arrange(p1, p2, p3, p4,p5,p6, nrow = 2)
+```
+
+
+
+#Determining Optimal Clusters
+
+```{r pressure, echo=FALSE}
+set.seed(123)
+
+fviz_nbclust(salesdata, kmeans, method = "wss")
+```
+5 clusters is the optimal number of clusters as it appears to be the bend in the knee
+
+#The average silhouette approach measures the quality of a clustering. That is, it determines how well each object lies within its cluster. A high average silhouette width indicates a good clustering.
+
+```{r pressure, echo=FALSE}
+fviz_nbclust(salesdata, kmeans, method = "silhouette")
+```
+Both the above methods suggesting k=5 as the number of optimal clusters
+
+# Compute k-means clustering with k = 6
+```{r }
+set.seed(123)
+final <- kmeans(salesdata, 6, nstart = 25)
+str(final)
+```
+
+#Cluster Plot
+
+```{r}
+fviz_cluster(final, data = salesdata)
+```
+
+#Extract then cluster and add to our original data
+
+```{r}
+salesdata %>%
+  mutate(Cluster = final$cluster) %>%
+  group_by(Cluster) %>%
+  summarise_all("mean")
+
+install.packages("xlsx")
+library(xlsx)
+write.table(salesdata, file ="C:/Users/nisht/Desktop/MITA/DAV/Project/cluster.csv",sep=',')
+```
+
+```{r}
+plot(salesdata$`Sales$`,salesdata$`GM%`)
+```
+
+#Adding Cluster Column to our Original file
+
+```{r}
+clusterFile <- cbind(salesdata, clusterNum = final$cluster)
+head(clusterFile)
+```
+
+#Exporting data
+
+```{r}
+install.packages("xlsx")
+library(xlsx)
+write.table(clusterFile, file="C:/Users/nisht/Desktop/MITA/DAV/Project/clusterFile.csv",sep=',')
+```
+
